@@ -410,7 +410,7 @@ function renderQuizDone() {
 
 /* ---------- 诗库 ---------- */
 const LIB = { q: '', src: '全部', n: 60, ext: false };
-const SRC = ['全部', '唐诗三百首', '宋词三百首', '千家诗', '诗经', '南唐二主词', '曹操诗集', '名篇补遗', '收藏'];
+const SRC = ['全部', '统编教材', '唐诗三百首', '宋词三百首', '千家诗', '诗经', '南唐二主词', '曹操诗集', '名篇补遗', '收藏'];
 function renderLib() {
   view.innerHTML = `
   <div class="lib-bar"><div class="search"><input id="q" placeholder="搜题目、作者或诗句，如：明月 / 李白 / 春江" value="${esc(LIB.q)}"></div>
