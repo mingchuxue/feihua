@@ -71,8 +71,8 @@ const hl = (s, ch) => esc(s).split(esc(ch)).join(`<em>${esc(ch)}</em>`);
 /* ---------- ui helpers ---------- */
 let toastT;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1900); }
-function modal(html) { $('#modalCard').innerHTML = `<button class="x" data-close aria-label="关闭">×</button>` + html; $('#modal').hidden = false; document.body.style.overflow = 'hidden'; }
-function closeModal() { $('#modal').hidden = true; document.body.style.overflow = ''; }
+function modal(html) { Motion.open($('#modal')); $('#modalCard').innerHTML = `<button class="x" data-close aria-label="关闭">×</button>` + html; $('#modal').hidden = false; document.body.style.overflow = 'hidden'; }
+function closeModal() { Motion.close($('#modal'), () => { $('#modal').hidden = true; document.body.style.overflow = ''; }); }
 $('#modal').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); });
 
@@ -209,6 +209,7 @@ function renderGame() {
   </div>`;
   const log = $('#log');
   log.innerHTML = G.log.map(msgHTML).join('');
+  { const ms = $$('.msg', log), seen = G._seen || 0; ms.forEach((m, i) => { if (i < seen) m.classList.add('old'); }); G._seen = ms.length; }
   log.scrollTop = log.scrollHeight;
   $$('.src', log).forEach(s => s.onclick = () => showPoem(+s.dataset.p, G.ch));
   const inp = $('#inp');
@@ -378,6 +379,8 @@ function renderQuiz(kind) {
     </div>
     <div style="display:flex;justify-content:space-between;margin-top:16px"><button class="btn sm" id="restart">重新出题</button><button class="btn ink" id="next" hidden>${Q.i === 9 ? '看成绩' : '下一题'}</button></div>
   </div>`;
+  Motion.enter($('.qcard', view)); Motion.stagger($('.choices', view), '.choice', 45);
+  if (Q.i > 0 && !Motion.reduced) { const bar = $('.prog i', view); bar.style.width = (Q.i - 1) * 10 + '%'; requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = Q.i * 10 + '%'; })); }
   $$('.choice', view).forEach(b => b.onclick = () => {
     if (Q.answered) return; Q.answered = true;
     const ok = b.dataset.o === q.ans;
@@ -386,7 +389,8 @@ function renderQuiz(kind) {
     if (!ok) { S.wrong.unshift({ a: q.pr.a, b: q.pr.b, id: p.a + '|' + p.t + '|' + p.lines[0] }); S.wrong = S.wrong.filter((w, i, arr) => arr.findIndex(x => x.a === w.a) === i).slice(0, 200); }
     else S.wrong = S.wrong.filter(w => w.a !== q.pr.a);
     save();
-    $$('.choice', view).forEach(c => { c.disabled = true; if (c.dataset.o === q.ans) c.classList.add('ok'); else if (c === b) c.classList.add('bad'); });
+    $$('.choice', view).forEach(c => { c.disabled = true; if (c.dataset.o === q.ans) { c.classList.add('ok'); Motion.pulse(c); } else if (c === b) { c.classList.add('bad'); Motion.pulse(c, 'mo-shake'); } });
+    Motion.enter($('#rev'));
     $('#rev').innerHTML = `<div class="full">${esc(q.pr.a)}，${esc(q.pr.b)}</div><span class="src" style="cursor:pointer;color:var(--ink3)" id="srcl">${esc(srcText(p))} ›</span>`;
     $('#srcl').onclick = () => showPoem(q.pr.id);
     $('#next').hidden = false; $('#next').focus();
@@ -401,6 +405,7 @@ function renderQuizDone() {
    <div class="muted" style="margin-bottom:24px">答错的句子会收进“我的 · 生疏句”</div>
    <div style="display:flex;gap:12px;justify-content:center"><button class="btn pri" id="again">再来一轮</button><a class="btn" href="#/me">去看看</a></div></div></div>`;
   $('#again').onclick = () => { newQuiz(kind); renderQuiz(kind); };
+  Motion.enter($('.done', view), 'mo-pop'); Motion.countUp(view, '.done .big', 700);
 }
 
 /* ---------- 诗库 ---------- */
@@ -430,6 +435,7 @@ function renderLib() {
     $('#more').innerHTML = res.length > LIB.n ? `<button class="btn" id="mb">再看 ${Math.min(60, res.length - LIB.n)} 首</button>` : '';
     if ($('#mb')) $('#mb').onclick = () => { LIB.n += 60; run(); };
     $$('.pc', view).forEach(c => c.onclick = () => showPoem(+c.dataset.i, q.length === 1 ? q : ''));
+    Motion.stagger($('#grid'), '.pc', 22, 14);
   };
   let deb; $('#q').oninput = e => { clearTimeout(deb); deb = setTimeout(() => { LIB.q = e.target.value; LIB.n = 60; run(); }, 180); };
   $('#ext').onchange = e => { LIB.ext = e.target.checked; if (LIB.ext) { loadExt().then(() => { if (route() === 'ku') run(); }); } run(); };
@@ -473,6 +479,9 @@ function render() {
   if (r !== 'ling' && G && !G.over) { G = null; }
   ({ home: renderHome, ling: renderLingSetup, jie: () => renderQuiz('jie'), tian: () => renderQuiz('tian'), ku: renderLib, me: renderMe }[r] || renderHome)();
   window.scrollTo(0, 0);
+  Motion.enter(view);
+  if (r !== 'ku') Motion.stagger(view, '.card:not(.pc)', 45, 8);
+  Motion.countUp(view, '.kpi b, .stat-row b, .done .big');
 }
 window.addEventListener('hashchange', render);
 view.innerHTML = '<div class="loading">展卷中…</div>';
@@ -482,5 +491,6 @@ loadCore().then(() => {
   foot.innerHTML = `诗词文本整理自开源项目 <a href="https://github.com/chinese-poetry/chinese-poetry" target="_blank" rel="noopener">chinese-poetry</a>，个别字句与通行教材版本可能略有不同。<br>记录只保存在本机浏览器中。`;
   document.body.insertBefore(foot, $('#tabbar'));
 }).catch(() => { view.innerHTML = '<div class="loading">诗卷没能打开，请刷新重试</div>'; });
+Motion.pills([{ sel: '#nav', mode: 'pill' }, { sel: '#tabbar', mode: 'dot' }, { sel: '.setup .opts', keep: true }, { sel: '.filters', keep: true }, { sel: '.setup .chars', keep: true }, { sel: '.posbar', keep: true, mode: 'pill' }]);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

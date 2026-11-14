@@ -233,3 +233,43 @@ h1,h2,h3{font-family:var(--serif);font-weight:700;letter-spacing:1px}
   .choice{letter-spacing:1px}
   .board{height:calc(100dvh - 170px)}
 }
+
+/* —— 切换与反馈动效 —— */
+.nav>.mo-ind{background:var(--ink)}
+.nav.mo-g a.on{background:transparent}
+.nav a{transition:color .25s,background-color .2s}
+.tabbar>.mo-ind{background:var(--zhu)}
+.tabbar a{transition:color .25s}
+.tabbar a i{transition:transform .35s var(--mo-spring)}
+.tabbar a.on i{transform:translateY(-2px) scale(1.1)}
+.opts.mo-g>.chip.on,.filters.mo-g>.chip.on{background:transparent;border-color:transparent;color:var(--paper)}
+.opts>.mo-ind,.filters>.mo-ind{background:var(--ink)}
+.chip{transition:color .25s,border-color .2s,background-color .2s,transform .15s}
+.chars.mo-g>.cbtn.on{background:transparent;border-color:transparent;color:#fff}
+.chars>.mo-ind{background:var(--zhu);border-radius:12px}
+.posbar>.mo-ind{background:var(--zhu);border-radius:6px}
+.posbar.mo-g i.on{background:transparent}
+.posbar i{transition:color .25s}
+.btn,.chip,.cbtn,.choice,.tabbar a,.nav a{-webkit-tap-highlight-color:transparent}
+.btn{transition:transform .15s var(--mo-ease),border-color .2s,background-color .2s,box-shadow .2s}
+.btn:active:not(:disabled),.chip:active,.cbtn:active,.choice:active:not(:disabled){transform:scale(.95)}
+.cbtn:hover{transform:translateY(-2px)}
+.pc{transition:transform .22s var(--mo-ease),border-color .2s,box-shadow .22s}
+.pc:hover{box-shadow:0 10px 26px rgba(80,60,30,.12)}
+.modal-bg{animation:mo-fade-in .22s ease}
+.modal-card{animation:mo-pop-in .3s var(--mo-spring)}
+.modal.mo-out .modal-bg{animation:mo-fade-out .17s ease forwards}
+.modal.mo-out .modal-card{animation:mo-pop-out .17s ease forwards}
+.msg{animation:fh-msg .42s var(--mo-spring);transform-origin:left bottom}
+.msg.me{transform-origin:right bottom}
+.msg.sys{transform-origin:center}
+.msg.old{animation:none}
+.msg .bub em{display:inline-block}
+.msg:not(.old) .bub em{animation:fh-ling .7s .18s var(--mo-ease) backwards}
+@keyframes fh-msg{from{opacity:0;transform:translateY(12px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes fh-ling{from{transform:scale(1.6);opacity:0}60%{transform:scale(.92);opacity:1}to{transform:none}}
+.prog i{transition:width .45s var(--mo-ease)}
+.mo-pop{animation:mo-pop-in .4s var(--mo-spring)}
+.timer.warn{animation:fh-beat 1s ease-in-out infinite}
+@keyframes fh-beat{50%{transform:scale(1.07)}}
+.toast{transition:opacity .25s,transform .3s var(--mo-spring)}
