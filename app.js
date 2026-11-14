@@ -133,7 +133,7 @@ function renderHome() {
 }
 
 /* ---------- 飞花令 ---------- */
-const cfg = Object.assign({ ch: '花', mode: 'free', opp: 'ai', level: 2, time: 30 }, (() => { try { return JSON.parse(localStorage.getItem('feihua.cfg') || '{}'); } catch { return {}; } })());
+const cfg = Object.assign({ ch: '花', mode: 'free', opp: 'cpu', level: 2, time: 30 }, (() => { try { return JSON.parse(localStorage.getItem('feihua.cfg') || '{}'); } catch { return {}; } })());
 const saveCfg = () => { try { localStorage.setItem('feihua.cfg', JSON.stringify(cfg)); } catch {} };
 const LEVELS = [{ n: '书童', min: 5, max: 9 }, { n: '秀才', min: 12, max: 20 }, { n: '翰林', min: 22, max: 36 }, { n: '状元', min: 999, max: 999 }];
 let G = null, pending = false;
@@ -151,7 +151,7 @@ function renderLingSetup() {
         <div class="custom"><span class="muted" style="font-size:14px">或自定</span><input id="cc" maxlength="1" placeholder="字" value="${HOT.includes(cfg.ch) ? '' : esc(cfg.ch)}"><span class="muted" id="ccInfo" style="font-size:13px"></span></div>
       </div>
       <div class="field"><label>规则</label><div class="opts">${o('mode', 'free', '经典：句中含令字')}${o('mode', 'pos', '位置飞花：令字依次在第 1–7 字')}</div></div>
-      <div class="field"><label>对手</label><div class="opts">${o('opp', 'ai', '与对手对弈')}${o('opp', 'duo', '和同桌轮流（同一台设备）')}</div></div>
+      <div class="field"><label>对手</label><div class="opts">${o('opp', 'cpu', '与对手对弈')}${o('opp', 'duo', '和同桌轮流（同一台设备）')}</div></div>
       <div class="field" id="lvF" ${cfg.opp === 'duo' ? 'hidden' : ''}><label>对手水平</label><div class="opts">${LEVELS.map((l, i) => o('level', i, l.n)).join('')}</div></div>
       <div class="field"><label>每句限时</label><div class="opts">${o('time', 15, '15 秒')}${o('time', 30, '30 秒')}${o('time', 60, '60 秒')}${o('time', 0, '不限时')}</div></div>
       <button class="btn pri" id="go" style="width:100%;padding:14px;font-size:17px">开局</button>
@@ -177,8 +177,8 @@ function startGame() {
   if (!ch || !segsWith(ch).length) { toast('这个字在名篇里找不到，换一个吧'); return; }
   const lv = LEVELS[cfg.level] || LEVELS[1];
   G = { live: true, ch, mode: cfg.mode, opp: cfg.opp, time: cfg.time, level: cfg.level, used: new Set(), log: [], turn: 0, round: 0, hints: 3, mine: 0, theirs: 0,
-        aiLimit: lv.min + rnd(lv.max - lv.min + 1), over: false, startAt: Date.now() };
-  G.log.push({ k: 'sys', h: cfg.opp === 'ai' ? `令字「${esc(ch)}」，你先请。` : `令字「${esc(ch)}」，甲方先请。` });
+        cpuLimit: lv.min + rnd(lv.max - lv.min + 1), over: false, startAt: Date.now() };
+  G.log.push({ k: 'sys', h: cfg.opp === 'cpu' ? `令字「${esc(ch)}」，你先请。` : `令字「${esc(ch)}」，甲方先请。` });
   loadExt();
   if (location.hash !== '#/ling') location.hash = '#/ling'; else renderGame();
 }
@@ -186,7 +186,7 @@ const posOf = () => G.mode === 'pos' ? (G.round % 7) + 1 : 0;
 function validFor(seg, pos) { return pos ? seg[pos - 1] === G.ch : seg.includes(G.ch); }
 function renderGame() {
   const lv = LEVELS[G.level];
-  const who = G.opp === 'ai' ? (G.turn === 0 ? '轮到你' : '对手思索中…') : (G.turn === 0 ? '甲方作答' : '乙方作答');
+  const who = G.opp === 'cpu' ? (G.turn === 0 ? '轮到你' : '对手思索中…') : (G.turn === 0 ? '甲方作答' : '乙方作答');
   view.innerHTML = `
   <div class="game">
     <div class="card board">
@@ -201,7 +201,7 @@ function renderGame() {
       </div>
     </div>
     <aside class="side">
-      <div class="card"><h4>战况</h4><div class="score"><div><b>${G.mine}</b><span>${G.opp === 'ai' ? '你' : '甲方'}</span></div><div><b style="color:var(--line)">:</b></div><div><b>${G.theirs}</b><span>${G.opp === 'ai' ? '对手 · ' + lv.n : '乙方'}</span></div></div>
+      <div class="card"><h4>战况</h4><div class="score"><div><b>${G.mine}</b><span>${G.opp === 'cpu' ? '你' : '甲方'}</span></div><div><b style="color:var(--line)">:</b></div><div><b>${G.theirs}</b><span>${G.opp === 'cpu' ? '对手 · ' + lv.n : '乙方'}</span></div></div>
         ${G.mode === 'pos' ? `<div class="posbar">${[1,2,3,4,5,6,7].map(i => `<i class="${posOf() === i ? 'on' : ''}">${i}</i>`).join('')}</div>` : ''}</div>
       <div class="card"><h4>提示 · 剩 ${G.hints} 次</h4><button class="btn sm" id="hint" ${G.hints && !G.over && (G.opp === 'duo' || G.turn === 0) ? '' : 'disabled'}>给我一点线索</button><div class="hintline" id="hintline"></div></div>
       <div class="card"><h4>操作</h4><div class="opts"><button class="btn sm" id="quit">${G.over ? '换个令字' : '认输'}</button></div></div>
@@ -218,26 +218,26 @@ function renderGame() {
     if (matchMedia('(pointer:fine)').matches) inp.focus();
   } else $('#again').onclick = startGame;
   $('#hint').onclick = giveHint;
-  $('#quit').onclick = () => { if (G.over) { G = null; renderLingSetup(); } else endGame(G.opp === 'ai' ? 'lose-quit' : (G.turn === 0 ? 'p2' : 'p1')); };
+  $('#quit').onclick = () => { if (G.over) { G = null; renderLingSetup(); } else endGame(G.opp === 'cpu' ? 'lose-quit' : (G.turn === 0 ? 'p2' : 'p1')); };
   startTimer();
 }
 function msgHTML(m) {
   if (m.k === 'sys') return `<div class="msg sys ${m.err ? 'err' : ''}"><div class="bub">${m.h}</div></div>`;
   const cls = m.k === 'me' ? 'me' : m.k === 'p2' ? 'p2' : '';
-  const name = m.k === 'me' ? (G.opp === 'ai' ? '你' : '甲方') : (G.opp === 'ai' ? '对手' : '乙方');
+  const name = m.k === 'me' ? (G.opp === 'cpu' ? '你' : '甲方') : (G.opp === 'cpu' ? '对手' : '乙方');
   return `<div class="msg ${cls}"><div class="who">${name}</div><div class="bub">${m.segs.map(s => hl(s, G.ch)).join('，')}</div><div class="src" data-p="${m.pid}">${esc(srcText(P[m.pid]))} ›</div></div>`;
 }
 let timerT;
 function startTimer() {
   clearInterval(timerT);
-  if (!G.time || G.over || (G.opp === 'ai' && G.turn === 1)) return;
+  if (!G.time || G.over || (G.opp === 'cpu' && G.turn === 1)) return;
   if (G.deadline == null) G.deadline = Date.now() + G.time * 1000;
   const tick = () => {
     const left = Math.max(0, (G.deadline - Date.now()) / 1000);
     const tn = $('#tn'), tc = $('#tc'); if (!tn) { clearInterval(timerT); return; }
     tn.textContent = Math.ceil(left); tc.setAttribute('stroke-dashoffset', String(138.2 * (1 - left / G.time)));
     $('#timer').classList.toggle('warn', left <= 5);
-    if (left <= 0) { clearInterval(timerT); endGame(G.opp === 'ai' ? 'lose-time' : (G.turn === 0 ? 'p2' : 'p1')); }
+    if (left <= 0) { clearInterval(timerT); endGame(G.opp === 'cpu' ? 'lose-time' : (G.turn === 0 ? 'p2' : 'p1')); }
   };
   tick(); timerT = setInterval(tick, 200);
 }
@@ -255,39 +255,39 @@ async function submit() {
   if (pos && !f.segs.some(s => s[pos - 1] === G.ch)) return bad(`这一轮「${esc(G.ch)}」要在第 ${pos} 个字`);
   if (f.segs.some(s => G.used.has(s))) return bad(`“${esc(f.segs.find(s => G.used.has(s)))}”已经说过了`);
   f.segs.forEach(s => G.used.add(s));
-  const me = G.opp === 'ai' || G.turn === 0;
+  const me = G.opp === 'cpu' || G.turn === 0;
   G.log.push({ k: me ? 'me' : 'p2', segs: f.segs, pid: f.pid });
-  if (G.opp === 'ai' || G.turn === 0) { G.mine++; } else G.theirs++;
+  if (G.opp === 'cpu' || G.turn === 0) { G.mine++; } else G.theirs++;
   f.segs.forEach(s => { if (s.includes(G.ch)) S.said[s] = (S.said[s] || 0) + 1; });
   S.lines++; save();
   G.round++; G.deadline = null; inp.value = '';
   if (G.opp === 'duo') { G.turn = 1 - G.turn; renderGame(); return; }
   G.turn = 1; renderGame();
-  setTimeout(aiMove, 650 + rnd(900));
+  setTimeout(cpuMove, 650 + rnd(900));
 }
-function aiCandidates(pos) {
+function cpuCandidates(pos) {
   const deep = G.level >= 3;
   let c = segsWith(G.ch, deep && extState === 'done').filter(([s]) => !G.used.has(s) && validFor(s, pos));
   return c;
 }
-function aiMove() {
+function cpuMove() {
   if (!G || G.over || G.turn !== 1) return;
   const pos = posOf();
-  const c = aiCandidates(pos);
-  if (!c.length || G.theirs >= G.aiLimit) { endGame('win'); return; }
+  const c = cpuCandidates(pos);
+  if (!c.length || G.theirs >= G.cpuLimit) { endGame('win'); return; }
   // prefer 5/7-char lines from 唐宋 for flavour
   const good = c.filter(([s, id]) => (s.length === 5 || s.length === 7) && P[id].d !== '先秦');
   const famed = good.filter(([s, id]) => P[id].core && P[id].s !== '全唐诗' && P[id].s !== '全宋诗' || /^全/.test(P[id].s) && P[id].core);
   const r = Math.random();
   const [s, id] = pick(famed.length && r < .7 ? famed : good.length && r < .92 ? good : c);
   G.used.add(s); G.theirs++; G.round++;
-  G.log.push({ k: 'ai', segs: [s], pid: id });
+  G.log.push({ k: 'cpu', segs: [s], pid: id });
   G.turn = 0; G.deadline = null; renderGame();
 }
 function giveHint() {
   if (!G || !G.hints || G.over) return;
-  const c = aiCandidates(posOf()).filter(([s, id]) => P[id].core && (s.length === 5 || s.length === 7));
-  const pool = c.length ? c : aiCandidates(posOf());
+  const c = cpuCandidates(posOf()).filter(([s, id]) => P[id].core && (s.length === 5 || s.length === 7));
+  const pool = c.length ? c : cpuCandidates(posOf());
   if (!pool.length) { $('#hintline').textContent = '似乎已经没有可说的了'; return; }
   const [s, id] = pick(pool);
   G.hints--;
@@ -301,11 +301,11 @@ function endGame(res) {
   clearInterval(timerT);
   G.over = true; G.live = true;
   const ch = G.ch;
-  if (G.opp === 'ai') {
+  if (G.opp === 'cpu') {
     S.games++; if (res === 'win') S.wins++;
     S.best[ch] = Math.max(S.best[ch] || 0, G.mine);
     markDay();
-    const sample = shuffle(aiCandidates(0).filter(([s]) => !G.used.has(s))).slice(0, 3);
+    const sample = shuffle(cpuCandidates(0).filter(([s]) => !G.used.has(s))).slice(0, 3);
     const msg = res === 'win' ? `对手接不上了——你赢了！本局你吟出 ${G.mine} 句。` : res === 'lose-time' ? `时间到。本局你吟出 ${G.mine} 句。` : `你认输了。本局你吟出 ${G.mine} 句。`;
     sys(`<b style="color:var(--zhu)">${msg}</b>${sample.length ? `<br><span style="font-size:13px">还可以说：${sample.map(([s]) => esc(s)).join('　')}</span>` : ''}`);
   } else {

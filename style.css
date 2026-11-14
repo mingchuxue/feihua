@@ -225,3 +225,11 @@ h1,h2,h3{font-family:var(--serif);font-weight:700;letter-spacing:1px}
 }
 .mobile-only{display:none}
 @media (max-width:680px){.mobile-only{display:block}}
+.game>*,.setup>*{min-width:0}
+.board{min-width:0}
+.msg .bub{word-break:break-all}
+@media (max-width:680px){
+  .choices:not(.chars4){grid-template-columns:1fr}
+  .choice{letter-spacing:1px}
+  .board{height:calc(100dvh - 170px)}
+}
