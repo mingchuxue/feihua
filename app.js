@@ -481,7 +481,6 @@ loadCore().then(() => {
   const foot = document.createElement('footer'); foot.className = 'foot';
   foot.innerHTML = `诗词文本整理自开源项目 <a href="https://github.com/chinese-poetry/chinese-poetry" target="_blank" rel="noopener">chinese-poetry</a>，个别字句与通行教材版本可能略有不同。<br>记录只保存在本机浏览器中。`;
   document.body.insertBefore(foot, $('#tabbar'));
-  if ('requestIdleCallback' in window) requestIdleCallback(() => setTimeout(loadExt, 4000));
 }).catch(() => { view.innerHTML = '<div class="loading">诗卷没能打开，请刷新重试</div>'; });
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
