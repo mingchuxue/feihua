@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>飞花 · 诗词对弈</title>
+<meta name="description" content="飞花令、上下句接龙、诗句填字与诗词检索，一千多首名篇与两万多首唐宋诗词。">
+<meta name="theme-color" content="#f3ede1">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="paper"></div>
+<header class="top">
+  <a class="brand" href="#/"><span class="seal">飞花</span><span class="brand-t"><b>飞花</b><small>诗词对弈</small></span></a>
+  <nav class="nav" id="nav">
+    <a href="#/" data-r="home">首页</a>
+    <a href="#/ling" data-r="ling">飞花令</a>
+    <a href="#/jie" data-r="jie">接句</a>
+    <a href="#/tian" data-r="tian">填字</a>
+    <a href="#/ku" data-r="ku">诗库</a>
+    <a href="#/me" data-r="me">我的</a>
+  </nav>
+</header>
+<main id="view" class="view"></main>
+<nav class="tabbar" id="tabbar">
+  <a href="#/" data-r="home"><i>⌂</i>首页</a>
+  <a href="#/ling" data-r="ling"><i>令</i>飞花令</a>
+  <a href="#/jie" data-r="jie"><i>接</i>接句</a>
+  <a href="#/ku" data-r="ku"><i>卷</i>诗库</a>
+  <a href="#/me" data-r="me"><i>我</i>我的</a>
+</nav>
+<div class="modal" id="modal" hidden><div class="modal-bg" data-close></div><div class="modal-card" id="modalCard"></div></div>
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
