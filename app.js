@@ -13,9 +13,9 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i 
 
 /* ---------- storage ---------- */
 const KEY = 'feihua.v1';
-const def = () => ({ games: 0, wins: 0, lines: 0, said: {}, best: {}, fav: [], jie: { n: 0, ok: 0 }, tian: { n: 0, ok: 0 }, wrong: [], days: {} });
+const def = () => ({ games: 0, wins: 0, lines: 0, said: {}, best: {}, fav: [], jie: { n: 0, ok: 0 }, tian: { n: 0, ok: 0 }, mo: { n: 0, ok: 0 }, rec: {}, wrong: [], days: {} });
 let S;
-try { S = Object.assign(def(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { S = def(); }
+try { S = Object.assign(def(), JSON.parse(localStorage.getItem(KEY) || '{}')); S.mo = Object.assign(def().mo, S.mo); S.rec = S.rec || {}; } catch { S = def(); }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const markDay = () => { S.days[today()] = (S.days[today()] || 0) + 1; save(); };
@@ -109,7 +109,7 @@ function renderHome() {
       <h1>飞花令</h1>
       <div class="sub">花自飘零水自流，一句一句接下去</div>
       <p>给一个字，你一句，我一句，看谁先接不上。这里收录了 ${coreN.toLocaleString()} 首常诵名篇作对手的“腹稿”，另有两万余首唐宋诗词用来核对你的诗句。</p>
-      <div class="acts"><a class="btn pri" href="#/ling">开始飞花令</a><a class="btn" href="#/jie">上下句接龙</a></div>
+      <div class="acts"><a class="btn pri" href="#/ling">开始飞花令</a><a class="btn" href="#/mo">去默写</a></div>
       <div class="stat-row"><div><b>${S.games}</b><span>对局</span></div><div><b>${Object.keys(S.said).length}</b><span>吟出诗句</span></div><div><b>${S.fav.length}</b><span>收藏</span></div></div>
       <svg class="petal" viewBox="0 0 200 200"><g fill="#b23a2e">${[0,72,144,216,288].map(r => `<ellipse cx="100" cy="55" rx="28" ry="48" transform="rotate(${r} 100 100)"/>`).join('')}</g><circle cx="100" cy="100" r="14" fill="#a8844e"/></svg>
     </div>
@@ -119,12 +119,13 @@ function renderHome() {
       <div style="text-align:center"><button class="btn sm" id="dailyOpen">读全诗</button></div>
     </div>
   </section>
-  <div class="sec-h"><h2>四种玩法</h2></div>
+  <div class="sec-h"><h2>五种玩法</h2></div>
   <section class="modes">
     <a class="card mode" href="#/ling"><div class="big">令</div><h3>飞花令</h3><p>和对手轮流吟出含有令字的诗句，可选位置飞花与限时。</p></a>
     <a class="card mode" href="#/jie"><div class="big">接</div><h3>上下句</h3><p>看上句选下句，十题一轮，熟句检验。</p></a>
     <a class="card mode" href="#/tian"><div class="big">填</div><h3>诗句填字</h3><p>名句缺一字，从四个字里挑回原句。</p></a>
-    <a class="card mode" href="#/ku"><div class="big">卷</div><h3>诗库</h3><p>按作者、题目、字句检索，竖排阅读与收藏。</p></a>
+    <a class="card mode" href="#/mo"><div class="big">默</div><h3>诗词默写</h3><p>给出题目与作者，把空着的诗句写出来，记下背诵进度。</p></a>
+    <a class="card mode" href="#/ku"><div class="big">卷</div><h3>诗库</h3><p>按朝代、作者、题目检索，竖排阅读与收藏。</p></a>
   </section>
   <div class="sec-h"><h2>常用令字</h2><span class="muted" style="font-size:13px">点一个字直接开局</span></div>
   <div class="chars">${HOT.map(c => `<button class="cbtn" data-c="${c}">${c}${S.best[c] ? `<sup>${S.best[c]}</sup>` : ''}</button>`).join('')}</div>`;
@@ -409,13 +410,18 @@ function renderQuizDone() {
 }
 
 /* ---------- 诗库 ---------- */
-const LIB = { q: '', src: '全部', n: 60, ext: false };
+const LIB = { q: '', src: '全部', dyn: '全部', au: '', n: 60, ext: false };
 const SRC = ['全部', '统编教材', '唐诗三百首', '宋词三百首', '千家诗', '诗经', '南唐二主词', '曹操诗集', '名篇补遗', '收藏'];
 function renderLib() {
+  const DYN = ['全部','先秦','汉','魏晋','南北朝','唐','五代','宋','元','明','清'];
+  const alias = { '晋':'魏晋','东晋':'魏晋','魏':'魏晋','三国':'魏晋' };
+  const dynOf = p => alias[p.d] || p.d || '其他';
   view.innerHTML = `
   <div class="lib-bar"><div class="search"><input id="q" placeholder="搜题目、作者或诗句，如：明月 / 李白 / 春江" value="${esc(LIB.q)}"></div>
   <label class="chip" style="cursor:pointer"><input type="checkbox" id="ext" ${LIB.ext ? 'checked' : ''} style="margin:0 6px 0 0;accent-color:#b23a2e">含两万首扩展诗库</label></div>
-  <div class="filters">${SRC.map(s => `<button class="chip ${LIB.src === s ? 'on' : ''}" data-s="${s}">${s}</button>`).join('')}</div>
+  <div class="filters" id="srcF">${SRC.map(s => `<button class="chip ${LIB.src === s ? 'on' : ''}" data-s="${s}">${s}</button>`).join('')}</div>
+  <div class="filters" id="dynF">${DYN.map(s => `<button class="chip ${LIB.dyn === s ? 'on' : ''}" data-d="${s}">${s}</button>`).join('')}</div>
+  <div class="filters" id="auF"></div>
   <div class="muted" id="cnt" style="font-size:13px;margin-bottom:12px"></div>
   <div class="grid" id="grid"></div><div class="more" id="more"></div>`;
   const run = () => {
@@ -423,13 +429,21 @@ function renderLib() {
     let lim = LIB.ext && extState === 'done' ? P.length : coreN;
     const favIds = LIB.src === '收藏' ? new Set(S.fav.map(favPid)) : null;
     const res = [];
+    const auths = {};
     for (let i = 0; i < lim; i++) {
       const p = P[i];
       if (favIds && !favIds.has(i)) continue;
       if (!favIds && LIB.src !== '全部') { if (LIB.src === '名篇补遗' ? !(p.core && /^全/.test(p.s)) : p.s !== LIB.src) continue; }
+      if (LIB.dyn !== '全部' && dynOf(p) !== LIB.dyn) continue;
+      if (LIB.au && p.a !== LIB.au) continue;
       if (q && !(p.t.includes(q) || p.a.includes(q) || p.segs.some(s => s.includes(q)) || p.lines.join('').includes(q))) continue;
       res.push(i);
+      if (p.a) auths[p.a] = (auths[p.a] || 0) + 1;
     }
+    const topA = Object.entries(auths).sort((a,b)=>b[1]-a[1]).slice(0, 18);
+    const auF = $('#auF');
+    if (auF) auF.innerHTML = topA.length > 1 ? `<button class="chip ${!LIB.au ? 'on' : ''}" data-a="">全部作者</button>` + topA.map(([a,n]) => `<button class="chip ${LIB.au===a?'on':''}" data-a="${esc(a)}">${esc(a)} ${n}</button>`).join('') : '';
+    if (auF) $$('#auF .chip').forEach(b => b.onclick = () => { LIB.au = b.dataset.a; LIB.n = 60; renderLib(); });
     $('#cnt').textContent = `共 ${res.length.toLocaleString()} 首${LIB.ext && extState === 'loading' ? '（扩展诗库载入中…）' : ''}`;
     $('#grid').innerHTML = res.length ? res.slice(0, LIB.n).map(i => { const p = P[i]; const seg = q ? (p.segs.find(s => s.includes(q)) || p.segs[0]) : p.segs.slice(0, 2).join('，'); return `<div class="card pc" data-i="${i}"><h3>${esc(p.t)}</h3><div class="au">${esc(p.a)}${p.d ? ' · ' + esc(p.d) : ''}</div><div class="ex">${q ? hl(seg, q) : esc(seg)}</div></div>`; }).join('') : `<div class="empty" style="grid-column:1/-1"><span class="ic">空</span>${LIB.src === '收藏' ? '还没有收藏，读到喜欢的诗点“收藏”即可' : '没有找到，换个词试试'}</div>`;
     $('#more').innerHTML = res.length > LIB.n ? `<button class="btn" id="mb">再看 ${Math.min(60, res.length - LIB.n)} 首</button>` : '';
@@ -439,8 +453,89 @@ function renderLib() {
   };
   let deb; $('#q').oninput = e => { clearTimeout(deb); deb = setTimeout(() => { LIB.q = e.target.value; LIB.n = 60; run(); }, 180); };
   $('#ext').onchange = e => { LIB.ext = e.target.checked; if (LIB.ext) { loadExt().then(() => { if (route() === 'ku') run(); }); } run(); };
-  $$('.filters .chip', view).forEach(b => b.onclick = () => { LIB.src = b.dataset.s; LIB.n = 60; renderLib(); });
+  $$('#srcF .chip', view).forEach(b => b.onclick = () => { LIB.src = b.dataset.s; LIB.au = ''; LIB.n = 60; renderLib(); });
+  $$('#dynF .chip', view).forEach(b => b.onclick = () => { LIB.dyn = b.dataset.d; LIB.au = ''; LIB.n = 60; renderLib(); });
   run();
+}
+
+
+/* ---------- 默写 ---------- */
+const recKey = p => p.a + '|' + p.t;
+function moPool(pref) {
+  const out = [];
+  const lim = coreN;
+  for (let i = 0; i < lim; i++) {
+    const p = P[i];
+    const n = p.segs.reduce((a,s)=>a+s.length,0);
+    if (n < 10 || n > 120 || p.segs.length < 2) continue;
+    if (pref === 'fav' && !S.fav.includes(p.a + '|' + p.t + '|' + p.lines[0])) continue;
+    if (pref === 'tb' && p.s !== '统编教材') continue;
+    out.push(i);
+  }
+  return out.length ? out : [...Array(Math.min(coreN, 400)).keys()].filter(i => P[i].segs.length >= 2);
+}
+let MO = null;
+function startMo(pref, pid) {
+  const pool = moPool(pref);
+  const id = pid != null ? pid : pool[rnd(pool.length)];
+  const p = P[id];
+  const hide = p.segs.map((s, i) => i === 0 && p.segs.length > 2 ? false : (s.length >= 4));
+  if (!hide.some(Boolean)) hide[hide.length - 1] = true;
+  MO = { id, pref: pref || 'tb', hide, ans: {}, ok: null };
+  if (route() !== 'mo') location.hash = '#/mo'; else renderMo();
+}
+function renderMo() {
+  if (!MO) {
+    const recN = Object.keys(S.rec).length;
+    view.innerHTML = `<div class="setup">
+      <h2 style="margin-top:0">诗词默写</h2>
+      <p class="muted" style="margin:0 0 18px">给出题目和作者，把空着的句子写出来。答对会记入背诵进度。</p>
+      <div class="me-grid">
+        <div class="card kpi"><b>${S.mo.ok || 0}</b><span>默对篇次 · 共练 ${S.mo.n || 0}</span></div>
+        <div class="card kpi"><b>${recN}</b><span>已有背诵记录的篇目</span></div>
+      </div>
+      <div class="acts" style="margin-top:8px"><button class="btn pri" id="moTb">从统编名篇抽一首</button><button class="btn" id="moAll">从核心诗库抽一首</button>${S.fav.length ? '<button class="btn" id="moFav">从收藏里抽</button>' : ''}</div>
+      ${recN ? `<div class="sec-h"><h2>最近背过</h2></div><div class="grid">${Object.entries(S.rec).sort((a,b)=>b[1].t-a[1].t).slice(0,12).map(([k,v]) => { const [a,title]=k.split('|'); return `<div class="card pc" data-k="${esc(k)}"><h3>${esc(title)}</h3><div class="au">${esc(a)} · 默对 ${v.n} 次</div></div>`; }).join('')}</div>` : ''}
+    </div>`;
+    $('#moTb').onclick = () => startMo('tb');
+    if ($('#moAll')) $('#moAll').onclick = () => startMo('all');
+    if ($('#moFav')) $('#moFav').onclick = () => startMo('fav');
+    $$('.pc[data-k]', view).forEach(c => c.onclick = () => { const i = P.findIndex(p => recKey(p) === c.dataset.k && p.core); if (i>=0) startMo('tb', i); else toast('这首暂时不在核心诗库里'); });
+    return;
+  }
+  const p = P[MO.id];
+  const rows = p.segs.map((s, i) => MO.hide[i]
+    ? `<div class="mo-line"><span class="mo-n">${i+1}</span><input class="mo-in" data-i="${i}" maxlength="${s.length+4}" placeholder="第 ${i+1} 句，${s.length} 个字" value="${esc(MO.ans[i]||'')}" ${MO.ok!=null?'disabled':''}></div>`
+    : `<div class="mo-line show"><span class="mo-n">${i+1}</span><span class="mo-txt">${esc(s)}</span></div>`);
+  const ck = MO.ok == null ? '' : `<div class="mo-res ${MO.ok?'ok':'bad'}">${MO.ok ? '全部写对了' : '有的句子还不熟，对照红字再写一遍'}</div>`;
+  view.innerHTML = `<div class="setup mo-box">
+    <div class="mo-h"><div><h2 style="margin:0">${esc(p.t)}</h2><div class="au" style="margin-top:6px">${esc(p.a)}${p.d?' · '+esc(p.d):''} · ${esc(p.s)}</div></div>
+    <button class="btn sm" id="moSkip">换一首</button></div>
+    <p class="muted">把空着的句子写完整，标点不用写。</p>
+    ${rows.join('')}
+    ${ck}
+    <div class="acts" style="margin-top:16px">${MO.ok==null?'<button class="btn pri" id="moGo">核对</button>':'<button class="btn pri" id="moNext">再默一首</button><button class="btn" id="moAgain">再默这篇</button><button class="btn" id="moRead">看全诗</button>'}</div>
+  </div>`;
+  $$('.mo-in', view).forEach(inp => { inp.oninput = () => { MO.ans[inp.dataset.i] = inp.value; }; inp.onkeydown = e => { if (e.key==='Enter') { e.preventDefault(); const nx=$$('.mo-in',view); const j=nx.indexOf(inp); if (j<nx.length-1) nx[j+1].focus(); else $('#moGo')&&$('#moGo').click(); } }; });
+  const first = $('.mo-in', view); if (first && MO.ok==null) setTimeout(()=>first.focus(), 80);
+  $('#moSkip').onclick = () => startMo(MO.pref);
+  if ($('#moGo')) $('#moGo').onclick = () => {
+    let all = true;
+    p.segs.forEach((s, i) => {
+      if (!MO.hide[i]) return;
+      const g = norm(MO.ans[i] || ''), a = norm(s);
+      const el = $(`.mo-in[data-i="${i}"]`);
+      const ok = g === a;
+      if (!ok) all = false;
+      el.classList.toggle('ok', ok); el.classList.toggle('bad', !ok);
+      if (!ok) el.title = '应作：' + s;
+    });
+    S.mo.n++; if (all) { S.mo.ok++; const k = recKey(p); S.rec[k] = { n: (S.rec[k]?.n||0)+1, t: Date.now() }; }
+    save(); markDay(); MO.ok = all; renderMo();
+  };
+  if ($('#moNext')) $('#moNext').onclick = () => startMo(MO.pref);
+  if ($('#moAgain')) $('#moAgain').onclick = () => startMo(MO.pref, MO.id);
+  if ($('#moRead')) $('#moRead').onclick = () => showPoem(MO.id);
 }
 
 /* ---------- 我的 ---------- */
@@ -456,7 +551,11 @@ function renderMe() {
     <div class="card kpi"><b>${said.length}</b><span>吟出过的不同诗句</span></div>
     <div class="card kpi"><b>${rate(S.jie)}</b><span>接句正确率 · ${S.jie.n} 题</span></div>
     <div class="card kpi"><b>${rate(S.tian)}</b><span>填字正确率 · ${S.tian.n} 题</span></div>
+    <div class="card kpi"><b>${rate(S.mo)}</b><span>默写正确率 · ${S.mo.n} 篇</span></div>
+    <div class="card kpi"><b>${Object.keys(S.rec).length}</b><span>有背诵记录的篇目</span></div>
   </div>
+  <div class="sec-h"><h2>背诵进度</h2><a class="btn sm" href="#/mo">去默写</a></div>
+  ${Object.keys(S.rec).length ? `<div class="grid">${Object.entries(S.rec).sort((a,b)=>b[1].n-a[1].n).slice(0,24).map(([k,v]) => { const [a,title]=k.split('|'); return `<div class="card pc" data-r="${esc(k)}"><h3>${esc(title)}</h3><div class="au">${esc(a)} · 默对 ${v.n} 次</div></div>`; }).join('')}</div>` : `<div class="card empty"><span class="ic">默</span>还没有默写记录，去「默写」里写一首就好</div>`}
   <div class="sec-h"><h2>令字纪录</h2><span class="muted" style="font-size:13px">每个字单局最多吟出的句数 · 练习 ${days} 天</span></div>
   ${bests.length ? `<div class="rec-list">${bests.map(([c, n]) => `<div class="card rec"><div class="c">${esc(c)}</div><div class="n">${n} 句</div></div>`).join('')}</div>` : `<div class="card empty"><span class="ic">令</span>还没有对局记录</div>`}
   <div class="sec-h"><h2>生疏句</h2><span class="muted" style="font-size:13px">接句、填字答错的句子，答对后自动移出</span></div>
@@ -466,6 +565,7 @@ function renderMe() {
   ${said.length ? `<div class="sec-h"><h2>吟过的诗句</h2></div><div class="card" style="padding:20px;font-family:var(--kai);font-size:17px;line-height:2;color:var(--ink2)">${said.slice(-120).reverse().map(esc).join('　')}</div>` : ''}
   <div style="margin-top:36px;text-align:center"><button class="btn sm" id="reset">清除本机记录</button></div>`;
   $$('.pc[data-f]', view).forEach(c => c.onclick = () => { const i = favPid(c.dataset.f); if (i >= 0) showPoem(i); else toast('这首在扩展诗库里，稍后再试'); });
+  $$('.pc[data-r]', view).forEach(c => c.onclick = () => { const i = P.findIndex(p => recKey(p) === c.dataset.r && p.id < coreN); if (i>=0) startMo('tb', i); });
   $('#reset').onclick = () => { if (confirm('清除本机上的全部对局、收藏与答题记录？')) { S = def(); save(); renderMe(); toast('已清除'); } };
 }
 
@@ -477,7 +577,7 @@ function render() {
   clearInterval(timerT);
   closeModal();
   if (r !== 'ling' && G && !G.over) { G = null; }
-  ({ home: renderHome, ling: renderLingSetup, jie: () => renderQuiz('jie'), tian: () => renderQuiz('tian'), ku: renderLib, me: renderMe }[r] || renderHome)();
+  ({ home: renderHome, ling: renderLingSetup, jie: () => renderQuiz('jie'), tian: () => renderQuiz('tian'), mo: renderMo, ku: renderLib, me: renderMe }[r] || renderHome)();
   window.scrollTo(0, 0);
   Motion.enter(view);
   if (r !== 'ku') Motion.stagger(view, '.card:not(.pc)', 45, 8);

@@ -273,3 +273,16 @@ h1,h2,h3{font-family:var(--serif);font-weight:700;letter-spacing:1px}
 .timer.warn{animation:fh-beat 1s ease-in-out infinite}
 @keyframes fh-beat{50%{transform:scale(1.07)}}
 .toast{transition:opacity .25s,transform .3s var(--mo-spring)}
+
+.mo-box .mo-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+.mo-line{display:flex;align-items:center;gap:10px;margin:8px 0}
+.mo-n{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:11px;color:var(--ink3)}
+.mo-txt{font-family:var(--kai);font-size:20px;letter-spacing:.12em}
+.mo-in{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper);font-family:var(--kai);font-size:20px;letter-spacing:.12em;outline:none}
+.mo-in:focus{border-color:var(--zhu)}
+.mo-in.ok{border-color:#3a8a55;background:#f1f8f3}
+.mo-in.bad{border-color:var(--zhu);background:#fdf4f3}
+.mo-res{margin-top:12px;padding:10px 14px;border-radius:10px;font-size:14px}
+.mo-res.ok{background:#eef7f0;color:#2b6b40}
+.mo-res.bad{background:#fdf4f3;color:var(--zhu)}
+@media (max-width:680px){.nav a{padding:8px 10px;font-size:14px}}
