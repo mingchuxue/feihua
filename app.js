@@ -76,12 +76,36 @@ function closeModal() { Motion.close($('#modal'), () => { $('#modal').hidden = t
 $('#modal').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); });
 
+function poemForm(p) {
+  const segs = (p.segs || []).filter(Boolean);
+  const n = segs.length;
+  const lens = [...new Set(segs.map(s => s.length))];
+  const src = p.s || '', t = p.t || '';
+  const ci = /词/.test(src) || /(浣溪沙|菩萨蛮|念奴娇|水调歌头|蝶恋花|满江红|虞美人|浪淘沙|如梦令|西江月|临江仙|渔家傲|江城子|破阵子|清平乐|青玉案|踏莎行|定风波|醉花阴|声声慢|永遇乐|雨霖铃|扬州慢|苏幕遮|卜算子|采桑子|鹧鸪天|南乡子|忆江南|长相思|渔歌子|点绛唇)/.test(t);
+  let form = '古体';
+  if (ci) form = '词';
+  else if (lens.length === 1 && lens[0] === 4) form = '四言';
+  else if (lens.length === 1 && lens[0] === 5) form = n === 4 ? '五言绝句' : n === 8 ? '五言律诗' : '五言诗';
+  else if (lens.length === 1 && lens[0] === 7) form = n === 4 ? '七言绝句' : n === 8 ? '七言律诗' : '七言诗';
+  else if (lens.length === 1 && lens[0] === 6) form = '六言诗';
+  else form = '杂言';
+  if (/诗经/.test(src) && (form === '四言' || form === '杂言')) form = form === '四言' ? '四言（诗经）' : form;
+  const ends = segs.map(s => s.slice(-1));
+  const even = ends.filter((_, i) => i % 2 === 1);
+  return { form, n, lens, ends, even, key: ({ '五言绝句': '五绝', '七言绝句': '七绝', '五言律诗': '五律', '七言律诗': '七律', '词': '词' }[form] || '其他') };
+}
 function showPoem(pid, mark) {
   const p = P[pid]; if (!p) return;
   const fav = S.fav.includes(p.a + '|' + p.t + '|' + p.lines[0]);
   const body = p.lines.map(l => { let h = esc(l); if (mark) h = h.split(esc(mark)).join(`<em>${esc(mark)}</em>`); return h; }).join('<br>');
+  const pf = poemForm(p);
+  const lenTxt = pf.lens.length === 1 ? `每句 ${pf.lens[0]} 字` : `句长 ${pf.lens.join(' / ')} 字`;
+  const rhymeTxt = (pf.form.includes('绝句') || pf.form.includes('律诗')) && pf.even.length
+    ? `偶句句末「${pf.even.join('」「')}」`
+    : (pf.ends.length ? `各句句末「${pf.ends.join('」「')}」` : '');
   modal(`<div class="poem-h"><div><h2>${esc(p.t)}</h2><div class="au">${esc(p.a)}${p.d ? ' · ' + esc(p.d) : ''}　<span class="tag">${esc(p.s)}</span></div></div></div>
   <div class="poem-body" id="pbody">${body}</div>
+  <div class="poem-read"><div class="pr-k">读法</div><p>体裁：<b>${esc(pf.form)}</b> · ${pf.n} 句，${lenTxt}</p>${rhymeTxt ? `<p>韵脚：${esc(rhymeTxt)}</p>` : ''}<p class="pr-n">韵脚只标句末用字，便于对照，不以韵书强行归部。</p></div>
   <div class="poem-acts"><button class="btn sm" id="pv">竖排</button><button class="btn sm ${fav ? 'ink' : ''}" id="pf">${fav ? '已收藏' : '收藏'}</button><button class="btn sm" id="pc">复制</button><button class="btn sm pri" id="pl">用这首诗起令</button></div>`);
   $('#pv').onclick = e => { const b = $('#pbody'); b.classList.toggle('v'); e.target.textContent = b.classList.contains('v') ? '横排' : '竖排'; };
   $('#pf').onclick = e => { const k = p.a + '|' + p.t + '|' + p.lines[0]; const i = S.fav.indexOf(k); if (i >= 0) S.fav.splice(i, 1); else S.fav.unshift(k); save(); e.target.textContent = i >= 0 ? '收藏' : '已收藏'; e.target.classList.toggle('ink', i < 0); toast(i >= 0 ? '已取消收藏' : '已收藏'); };
@@ -410,7 +434,7 @@ function renderQuizDone() {
 }
 
 /* ---------- 诗库 ---------- */
-const LIB = { q: '', src: '全部', dyn: '全部', au: '', n: 60, ext: false };
+const LIB = { q: '', src: '全部', dyn: '全部', au: '', form: '', n: 60, ext: false };
 const SRC = ['全部', '统编教材', '唐诗三百首', '宋词三百首', '千家诗', '诗经', '南唐二主词', '曹操诗集', '名篇补遗', '收藏'];
 function renderLib() {
   const DYN = ['全部','先秦','汉','魏晋','南北朝','唐','五代','宋','元','明','清'];
@@ -421,6 +445,7 @@ function renderLib() {
   <label class="chip" style="cursor:pointer"><input type="checkbox" id="ext" ${LIB.ext ? 'checked' : ''} style="margin:0 6px 0 0;accent-color:#b23a2e">含两万首扩展诗库</label></div>
   <div class="filters" id="srcF">${SRC.map(s => `<button class="chip ${LIB.src === s ? 'on' : ''}" data-s="${s}">${s}</button>`).join('')}</div>
   <div class="filters" id="dynF">${DYN.map(s => `<button class="chip ${LIB.dyn === s ? 'on' : ''}" data-d="${s}">${s}</button>`).join('')}</div>
+  <div class="filters" id="formF">${[['','全部体裁'],['五绝','五绝'],['七绝','七绝'],['五律','五律'],['七律','七律'],['词','词'],['其他','其他']].map(([k,n]) => `<button class="chip ${LIB.form === k ? 'on' : ''}" data-f="${k}">${n}</button>`).join('')}</div>
   <div class="filters" id="auF"></div>
   <div class="muted" id="cnt" style="font-size:13px;margin-bottom:12px"></div>
   <div class="grid" id="grid"></div><div class="more" id="more"></div>`;
@@ -436,6 +461,7 @@ function renderLib() {
       if (!favIds && LIB.src !== '全部') { if (LIB.src === '名篇补遗' ? !(p.core && /^全/.test(p.s)) : p.s !== LIB.src) continue; }
       if (LIB.dyn !== '全部' && dynOf(p) !== LIB.dyn) continue;
       if (LIB.au && p.a !== LIB.au) continue;
+      if (LIB.form && poemForm(p).key !== LIB.form) continue;
       if (q && !(p.t.includes(q) || p.a.includes(q) || p.segs.some(s => s.includes(q)) || p.lines.join('').includes(q))) continue;
       res.push(i);
       if (p.a) auths[p.a] = (auths[p.a] || 0) + 1;
@@ -455,6 +481,7 @@ function renderLib() {
   $('#ext').onchange = e => { LIB.ext = e.target.checked; if (LIB.ext) { loadExt().then(() => { if (route() === 'ku') run(); }); } run(); };
   $$('#srcF .chip', view).forEach(b => b.onclick = () => { LIB.src = b.dataset.s; LIB.au = ''; LIB.n = 60; renderLib(); });
   $$('#dynF .chip', view).forEach(b => b.onclick = () => { LIB.dyn = b.dataset.d; LIB.au = ''; LIB.n = 60; renderLib(); });
+  $$('#formF .chip', view).forEach(b => b.onclick = () => { LIB.form = b.dataset.f; LIB.n = 60; renderLib(); });
   run();
 }
 
